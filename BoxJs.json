@@ -1,0 +1,130 @@
+{
+    "id": "xiaoluli.app.sub",
+    "name": "自用脚本订阅",
+    "description": "该订阅兼容BoxJs以及QX Gallery",
+    "author": "@xiaoluli",
+    "icon": "https://avatars.githubusercontent.com/u/78784441",
+    "repo": "https://github.com/0xiaoluli0/QX",
+    "apps": [
+        {
+            "id": "BiliManga",
+            "name": "哔哩漫画",
+            "keys": [
+                "BILI_COMICS_CHECKIN"
+            ],
+            "descs_html": [
+                "<h4 align=\"center\">获取Cookie以及脚本配置请查看<a href=\"https://raw.githubusercontent.com/NobyDa/Script/master/Bilibili-DailyBonus/Manga.js\">脚本注释</a></h4>"
+            ],
+            "script": "https://raw.githubusercontent.com/NobyDa/Script/master/Bilibili-DailyBonus/Manga.js",
+            "author": "@NobyDa",
+            "repo": "https://github.com/NobyDa/Script/blob/master/Bilibili-DailyBonus/Manga.js",
+            "icons": [
+                "https://raw.githubusercontent.com/NobyDa/mini/master/Alpha/manga.png",
+                "https://raw.githubusercontent.com/NobyDa/mini/master/Color/manga.png"
+            ]
+        },
+        {
+          "id": "sfexpress",
+          "name": "顺丰速运",
+          "keys": [
+              "chavy_login_sfexpress"
+          ],
+          "author": "@wangfei021325, @chavyleung",
+          "repo": "https://github.com/chavyleung/scripts/blob/master/sfexpress",
+          "script": "https://raw.githubusercontent.com/chavyleung/scripts/master/sfexpress/sfexpress.js",
+          "icons": [
+              "https://raw.githubusercontent.com/Orz-3/mini/master/Alpha/sfexpress.png",
+              "https://raw.githubusercontent.com/Orz-3/mini/master/Color/sfexpress.png"
+          ]
+        },
+        {
+            "id": "52poje",
+            "name": "吾爱破解",
+            "keys": [
+                "nobyda_52pojie"
+            ],
+            "descs_html": [
+                "<h4 align=\"center\">获取Cookie以及脚本配置请查看<a href=\"https://raw.githubusercontent.com/NobyDa/Script/master/52pojie-DailyBonus/52pojie.js\">脚本注释</a></h4>"
+            ],
+            "script": "https://raw.githubusercontent.com/NobyDa/Script/master/52pojie-DailyBonus/52pojie.js",
+            "author": "@NobyDa",
+            "repo": "https://github.com/NobyDa/Script/blob/master/52pojie-DailyBonus/52pojie.js",
+            "icons": [
+                "https://raw.githubusercontent.com/NobyDa/mini/master/Alpha/52pj.png",
+                "https://raw.githubusercontent.com/NobyDa/mini/master/Color/52pj.png"
+            ]
+        },
+        {
+            "id": "Ctrip",
+            "name": "携程旅行",
+            "keys": [
+                "CTRIP_DAILY_BONUS"
+            ],
+            "descs_html": [
+                "<h4 align=\"center\">脚本说明以及配置请查看<a href=\"https://raw.githubusercontent.com/NobyDa/Script/master/Ctrip-DailyBonus/Ctrip.js\">脚本注释</a></h4>"
+            ],
+            "settings": [
+                {
+                    "id": "@CTRIP_DAILY_BONUS.Debug",
+                    "name": "开发者模式",
+                    "val": false,
+                    "type": "boolean",
+                    "desc": "用于调试脚本, 一般用户请勿开启."
+                }
+            ],
+            "script": "https://raw.githubusercontent.com/NobyDa/Script/master/Ctrip-DailyBonus/Ctrip.js",
+            "author": "@NobyDa",
+            "repo": "https://github.com/NobyDa/Script/blob/master/Ctrip-DailyBonus/Ctrip.js",
+            "icons": [
+                "https://raw.githubusercontent.com/NobyDa/mini/master/Alpha/ctrip.png",
+                "https://raw.githubusercontent.com/NobyDa/mini/master/Color/ctrip.png"
+            ]
+        },
+        {
+            "id": "GoogleCAPTCHA",
+            "name": "Google搜索人机验证",
+            "keys": [
+                "GOOGLE_CAPTCHA"
+            ],
+            "descs_html": [
+                "<h4 align=\"center\">脚本说明以及配置请查看<a href=\"https://raw.githubusercontent.com/NobyDa/Script/master/Surge/JS/Google_CAPTCHA.js\">脚本注释</a></h4>"
+            ],
+            "settings": [
+                {
+                    "id": "@GOOGLE_CAPTCHA.Regex",
+                    "name": "代理策略/策略组正则表达式",
+                    "val": "",
+                    "type": "text",
+                    "placeholder": "^(🇸🇬|🇭🇰)\\s.*\\d+$",
+                    "desc": "筛选的代理策略/策略组, 限制20个, 留空则表示随机使用。"
+                },
+                {
+                    "id": "@GOOGLE_CAPTCHA.RegexTest",
+                    "name": "正则表达式测试",
+                    "val": "",
+                    "type": "text",
+                    "placeholder": "(🇸🇬|🇭🇰)",
+                    "desc": "填写并保存后可在右上角测试匹配的策略/策略组。"
+                }
+            ],
+            "scripts": [
+                {
+                    "name": "测试匹配的策略/策略组",
+                    "script": "https://gist.githubusercontent.com/NobyDa/830932e4526c9c84169020a56c3ef199/raw/GOOGLE_CAPTCHA_TEST_POLICY.js"
+                }
+            ],
+            "author": "@NobyDa",
+            "repo": "https://github.com/NobyDa/Script/blob/master/Surge/JS/Google_CAPTCHA.js",
+            "icons": [
+                "https://raw.githubusercontent.com/NobyDa/mini/master/Alpha/Google.png",
+                "https://raw.githubusercontent.com/NobyDa/mini/master/Color/Google.png"
+            ]
+        }
+    ],
+    "task": [
+        {
+            "config": "30 8 * * * https://raw.githubusercontent.com/NobyDa/Script/master/Ctrip-DailyBonus/Ctrip.js, tag=携程旅行签到, img-url=https://raw.githubusercontent.com/NobyDa/mini/master/Color/ctrip.png",
+            "addons": "https://raw.githubusercontent.com/NobyDa/Script/master/QuantumultX/Snippet/CtripAuth.snippet, tag=携程旅行(获取授权)"
+        },
+    ]
+}
