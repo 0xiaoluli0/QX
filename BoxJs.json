@@ -111,6 +111,6 @@
         {
             "config": "30 8 * * * https://raw.githubusercontent.com/NobyDa/Script/master/Ctrip-DailyBonus/Ctrip.js, tag=携程旅行签到, img-url=https://raw.githubusercontent.com/NobyDa/mini/master/Color/ctrip.png",
             "addons": "https://raw.githubusercontent.com/NobyDa/Script/master/QuantumultX/Snippet/CtripAuth.snippet, tag=携程旅行(获取授权)"
-        },
+        }
     ]
 }
