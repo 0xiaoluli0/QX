@@ -5,10 +5,10 @@
 @Modified：仅新增 BoxJs 选项：抓包账号备注、视频次数、视频间隔、账号间隔
 
 [rewrite_local]
-^https:\/\/api\.pingmeapp\.net\/app\/queryBalanceAndBonus url script-request-header https://raw.githubusercontent.com/ZenmoFeiShi/Qx/refs/heads/main/PingMe.js
+^https:\/\/api\.pingmeapp\.net\/app\/queryBalanceAndBonus url script-request-header https://github.com/0xiaoluli0/QX/raw/refs/heads/main/PingMe.multi-account.js
 
 [task_local]
-30 8,20 * * * https://raw.githubusercontent.com/ZenmoFeiShi/Qx/refs/heads/main/PingMe.js, tag=PingMe签到, enabled=true
+30 8,20 * * * https://github.com/0xiaoluli0/QX/raw/refs/heads/main/PingMe.multi-account.js, tag=PingMe签到, enabled=true
 
 [MITM]
 hostname = api.pingmeapp.net
