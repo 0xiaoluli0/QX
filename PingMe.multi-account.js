@@ -6,7 +6,6 @@
 
 [rewrite_local]
 ^https:\/\/api\.pingmeapp\.net\/app\/queryBalanceAndBonus url script-request-header https://raw.githubusercontent.com/0xiaoluli0/QX/refs/heads/main/PingMe.multi-account.js
-
 [task_local]
 30 8,20 * * * https://raw.githubusercontent.com/0xiaoluli0/QX/refs/heads/main/PingMe.multi-account.js, tag=PingMe签到, enabled=true
 
@@ -20,6 +19,8 @@ const SECRET = '0fOiukQq7jXZV2GRi9LGlO';
 const MAX_VIDEO = readIntPref('pingme_max_video', 5, 0, 20);
 const VIDEO_DELAY = readIntPref('pingme_video_delay_ms', 8000, 1000, 60000);
 const ACCOUNT_GAP = readIntPref('pingme_account_gap_ms', 3500, 0, 60000);
+const DEBUG_LOG = readBoolPref('pingme_debug_log', false);
+const DEVICE_ID_MODE = readStringPref('pingme_device_id_mode', 'original'); // original / fake
 
 const IOS_VERSIONS = ['17.5.1','17.6.1','17.4.1','17.2.1','16.7.8','17.6','17.3.1','18.0.1','17.1.2','16.6.1'];
 const IOS_SCALES = ['2.00','3.00','3.00','2.00','3.00'];
@@ -127,6 +128,33 @@ function readIntPref(key, fallback, min, max) {
   }
 }
 
+function readStringPref(key, fallback) {
+  try {
+    if (typeof $prefs === 'undefined' || !$prefs || !$prefs.valueForKey) return fallback;
+    const raw = $prefs.valueForKey(key);
+    if (raw === null || raw === undefined || raw === '') return fallback;
+    return String(raw).trim() || fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+
+function readBoolPref(key, fallback) {
+  const raw = readStringPref(key, fallback ? 'true' : 'false').toLowerCase();
+  return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on';
+}
+
+function maskValue(value) {
+  const s = String(value || '');
+  if (!s) return '';
+  if (s.length <= 8) return `${s.slice(0, 2)}***${s.slice(-2)}`;
+  return `${s.slice(0, 4)}***${s.slice(-4)}`;
+}
+
+function debugLog(message) {
+  if (DEBUG_LOG) console.log(`【${scriptName} DEBUG】${message}`);
+}
+
 function parseRawQuery(url) {
   const query = (url.split('?')[1] || '').split('#')[0];
   const rawMap = {};
@@ -228,10 +256,19 @@ function buildSignedParamsRaw(capture, overrideDeviceId) {
   return params;
 }
 
-function buildUrl(path, capture, overrideDeviceId) {
+function buildUrlInfo(path, capture, overrideDeviceId) {
   const params = buildSignedParamsRaw(capture, overrideDeviceId);
   const qs = Object.keys(params).map(k => `${k}=${encodeURIComponent(params[k])}`).join('&');
-  return `https://api.pingmeapp.net/app/${path}?${qs}`;
+  return {
+    url: `https://api.pingmeapp.net/app/${path}?${qs}`,
+    signDate: params.signDate,
+    sign: params.sign,
+    deviceId: params.uniquedeviceid || ''
+  };
+}
+
+function buildUrl(path, capture, overrideDeviceId) {
+  return buildUrlInfo(path, capture, overrideDeviceId).url;
 }
 
 function randHex(n) {
@@ -275,10 +312,23 @@ function runAccount(acc, index, total) {
   const headers = buildHeaders(acc.capture, ua);
   const fakeDeviceId = genFakeDeviceId();
   const msgs = [tag];
+  const videoUsesFakeDevice = DEVICE_ID_MODE === 'fake';
+
+  debugLog(`${tag} 开始执行，MAX_VIDEO=${MAX_VIDEO}, VIDEO_DELAY=${VIDEO_DELAY}, ACCOUNT_GAP=${ACCOUNT_GAP}, DEVICE_ID_MODE=${DEVICE_ID_MODE}`);
+  debugLog(`${tag} UA=${ua}`);
+  debugLog(`${tag} headers=${Object.keys(headers).sort().join(',')}`);
 
   function fetchApi(path, useFakeId) {
     const overrideId = useFakeId ? fakeDeviceId : null;
-    return $task.fetch({ url: buildUrl(path, acc.capture, overrideId), method: 'GET', headers });
+    const info = buildUrlInfo(path, acc.capture, overrideId);
+    debugLog(`${tag} 请求 ${path} signDate=${info.signDate} sign=${maskValue(info.sign)} device=${maskValue(info.deviceId)} fakeDevice=${!!overrideId}`);
+    return $task.fetch({ url: info.url, method: 'GET', headers }).then(res => {
+      debugLog(`${tag} 响应 ${path} status=${res.statusCode || res.status || 'unknown'} body=${String(res.body || '').slice(0, 500)}`);
+      return res;
+    }).catch(err => {
+      debugLog(`${tag} 请求失败 ${path} ${err.error || String(err)}`);
+      throw err;
+    });
   }
 
   function doVideoLoop(count) {
@@ -288,18 +338,18 @@ function runAccount(acc, index, total) {
       return new Promise(resolve => {
         setTimeout(() => {
           i++;
-          fetchApi('videoBonus', true).then(res => {
+          fetchApi('videoBonus', videoUsesFakeDevice).then(res => {
             try {
               const d = JSON.parse(res.body);
               if (d.retcode === 0) {
                 msgs.push(`🎬 视频${i}：+${d.result?.bonus || '?'} Coins`);
                 resolve(next());
               } else {
-                msgs.push(`⏸ 视频${i}：${d.retmsg}`);
+                msgs.push(`⏸ 视频${i}：retcode=${d.retcode} ${d.retmsg || ''}`.trim());
                 resolve();
               }
             } catch (e) {
-              msgs.push(`❌ 视频${i}：解析失败`);
+              msgs.push(`❌ 视频${i}：解析失败 body=${String(res.body || '').slice(0, 120)}`);
               resolve();
             }
           }).catch(err => {
@@ -316,21 +366,21 @@ function runAccount(acc, index, total) {
     try {
       const d = JSON.parse(res.body);
       if (d.retcode === 0) msgs.push(`💰 余额：${d.result.balance} Coins`);
-      else msgs.push(`⚠️ 查询：${d.retmsg}`);
-    } catch (e) { msgs.push('❌ 查询：解析失败'); }
+      else msgs.push(`⚠️ 查询：retcode=${d.retcode} ${d.retmsg || ''}`.trim());
+    } catch (e) { msgs.push(`❌ 查询：解析失败 body=${String(res.body || '').slice(0, 120)}`); }
     return fetchApi('checkIn');
   }).then(res => {
     try {
       const d = JSON.parse(res.body);
       if (d.retcode === 0) msgs.push(`✅ 签到：${(d.result?.bonusHint || d.retmsg || '').replace(/\n/g, ' ')}`);
-      else msgs.push(`⚠️ 签到：${d.retmsg}`);
-    } catch (e) { msgs.push('❌ 签到：解析失败'); }
+      else msgs.push(`⚠️ 签到：retcode=${d.retcode} ${d.retmsg || ''}`.trim());
+    } catch (e) { msgs.push(`❌ 签到：解析失败 body=${String(res.body || '').slice(0, 120)}`); }
     return doVideoLoop(MAX_VIDEO);
   }).then(() => fetchApi('queryBalanceAndBonus')).then(res => {
     try {
       const d = JSON.parse(res.body);
       if (d.retcode === 0) msgs.push(`💰 最新余额：${d.result.balance} Coins`);
-    } catch (e) {}
+    } catch (e) { debugLog(`${tag} 最新余额解析失败 body=${String(res.body || '').slice(0, 500)}`); }
     return msgs.join('\n');
   }).catch(err => {
     msgs.push(`❌ 异常：${err.error || String(err)}`);
@@ -343,6 +393,9 @@ if (typeof $request !== 'undefined' && $request) {
   const headersMap = normalizeHeaderNameMap($request.headers || {});
   let baseUA = '';
   Object.keys(headersMap).forEach(k => { if (k.toLowerCase() === 'user-agent') baseUA = headersMap[k]; });
+
+  debugLog(`抓包 URL path=${($request.url.match(/\/app\/([^?]+)/) || [])[1] || 'unknown'} queryKeys=${Object.keys(paramsRaw).sort().join(',')}`);
+  debugLog(`抓包 headers=${Object.keys(headersMap).sort().join(',')}`);
 
   const store = loadStore();
   const fp = fingerprintOf(paramsRaw, headersMap);
