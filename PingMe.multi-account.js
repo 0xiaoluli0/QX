@@ -1,8 +1,8 @@
 //2026/05/11
 /*
-@Name：PingMe 自动化签到+视频奖励（多账号增强版）
+@Name：PingMe 自动化签到+视频奖励（BoxJs 选项版）
 @Author：怎么肥事
-@Modified：多账号指纹加入登录态 header，避免同设备多号互相覆盖
+@Modified：仅新增 BoxJs 选项：抓包账号备注、视频次数、视频间隔、账号间隔
 
 [rewrite_local]
 ^https:\/\/api\.pingmeapp\.net\/app\/queryBalanceAndBonus url script-request-header https://raw.githubusercontent.com/ZenmoFeiShi/Qx/refs/heads/main/PingMe.js
@@ -15,13 +15,11 @@ hostname = api.pingmeapp.net
 */
 
 const scriptName = 'PingMe';
-const storeKey = 'pingme_accounts_v2';
+const storeKey = 'pingme_accounts_v1';
 const SECRET = '0fOiukQq7jXZV2GRi9LGlO';
 const MAX_VIDEO = readIntPref('pingme_max_video', 5, 0, 20);
 const VIDEO_DELAY = readIntPref('pingme_video_delay_ms', 8000, 1000, 60000);
 const ACCOUNT_GAP = readIntPref('pingme_account_gap_ms', 3500, 0, 60000);
-const DEBUG_LOG = readBoolPref('pingme_debug_log', false);
-const DEVICE_ID_MODE = readStringPref('pingme_device_id_mode', 'original'); // original / fake
 
 const IOS_VERSIONS = ['17.5.1','17.6.1','17.4.1','17.2.1','16.7.8','17.6','17.3.1','18.0.1','17.1.2','16.6.1'];
 const IOS_SCALES = ['2.00','3.00','3.00','2.00','3.00'];
@@ -114,22 +112,7 @@ function normalizeHeaderNameMap(headers) {
   return out;
 }
 
-function readIntPref(key, fallback, min, max) {
-  try {
-    if (typeof $prefs === 'undefined' || !$prefs || !$prefs.valueForKey) return fallback;
-    const raw = $prefs.valueForKey(key);
-    if (raw === null || raw === undefined || raw === '') return fallback;
-    const value = parseInt(raw, 10);
-    if (!isFinite(value)) return fallback;
-    if (typeof min === 'number' && value < min) return min;
-    if (typeof max === 'number' && value > max) return max;
-    return value;
-  } catch (e) {
-    return fallback;
-  }
-}
-
-function readStringPref(key, fallback) {
+function readPrefString(key, fallback) {
   try {
     if (typeof $prefs === 'undefined' || !$prefs || !$prefs.valueForKey) return fallback;
     const raw = $prefs.valueForKey(key);
@@ -140,20 +123,14 @@ function readStringPref(key, fallback) {
   }
 }
 
-function readBoolPref(key, fallback) {
-  const raw = readStringPref(key, fallback ? 'true' : 'false').toLowerCase();
-  return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on';
-}
-
-function maskValue(value) {
-  const s = String(value || '');
-  if (!s) return '';
-  if (s.length <= 8) return `${s.slice(0, 2)}***${s.slice(-2)}`;
-  return `${s.slice(0, 4)}***${s.slice(-4)}`;
-}
-
-function debugLog(message) {
-  if (DEBUG_LOG) console.log(`【${scriptName} DEBUG】${message}`);
+function readIntPref(key, fallback, min, max) {
+  const raw = readPrefString(key, '');
+  if (!raw) return fallback;
+  const value = parseInt(raw, 10);
+  if (!isFinite(value)) return fallback;
+  if (typeof min === 'number' && value < min) return min;
+  if (typeof max === 'number' && value > max) return max;
+  return value;
 }
 
 function parseRawQuery(url) {
@@ -170,37 +147,10 @@ function parseRawQuery(url) {
   return rawMap;
 }
 
-function identityHeadersOf(headers) {
-  const ignored = {
-    host:1, accept:1, 'accept-encoding':1, 'accept-language':1, connection:1,
-    'content-length':1, 'content-type':1, 'user-agent':1
-  };
-  const preferred = ['authorization','token','x-token','x-auth-token','access-token','cookie','session','x-session'];
-  const lower = {};
-  Object.keys(headers || {}).forEach(k => {
-    const name = String(k).toLowerCase();
-    if (!name || name[0] === ':') return;
-    lower[name] = String(headers[k] || '');
-  });
-
-  const picked = [];
-  preferred.forEach(k => {
-    if (lower[k]) picked.push(`${k}=${lower[k]}`);
-  });
-
-  // 如果接口把登录态塞在奇怪的自定义 header 里，就退化为“除常见噪音外的 header 全参与”。
-  // 只拿 URL 参数当账号指纹，多个账号同设备时很容易互相覆盖——这坑不填就是假多账号。
-  if (!picked.length) {
-    Object.keys(lower).filter(k => !ignored[k]).sort().forEach(k => picked.push(`${k}=${lower[k]}`));
-  }
-  return picked.sort().join('&');
-}
-
-function fingerprintOf(paramsRaw, headers) {
+function fingerprintOf(paramsRaw) {
   const drop = { sign:1, signDate:1, timestamp:1, ts:1, nonce:1, random:1, reqTime:1, reqId:1, requestId:1 };
-  const paramsBase = Object.keys(paramsRaw || {}).filter(k => !drop[k]).sort().map(k => `${k}=${paramsRaw[k]}`).join('&');
-  const headersBase = identityHeadersOf(headers);
-  return MD5(`params:${paramsBase}|headers:${headersBase}`).slice(0, 12);
+  const base = Object.keys(paramsRaw || {}).filter(k => !drop[k]).sort().map(k => `${k}=${paramsRaw[k]}`).join('&');
+  return MD5(base).slice(0, 12);
 }
 
 function loadStore() {
@@ -257,19 +207,10 @@ function buildSignedParamsRaw(capture, overrideDeviceId) {
   return params;
 }
 
-function buildUrlInfo(path, capture, overrideDeviceId) {
+function buildUrl(path, capture, overrideDeviceId) {
   const params = buildSignedParamsRaw(capture, overrideDeviceId);
   const qs = Object.keys(params).map(k => `${k}=${encodeURIComponent(params[k])}`).join('&');
-  return {
-    url: `https://api.pingmeapp.net/app/${path}?${qs}`,
-    signDate: params.signDate,
-    sign: params.sign,
-    deviceId: params.uniquedeviceid || ''
-  };
-}
-
-function buildUrl(path, capture, overrideDeviceId) {
-  return buildUrlInfo(path, capture, overrideDeviceId).url;
+  return `https://api.pingmeapp.net/app/${path}?${qs}`;
 }
 
 function randHex(n) {
@@ -313,55 +254,31 @@ function runAccount(acc, index, total) {
   const headers = buildHeaders(acc.capture, ua);
   const fakeDeviceId = genFakeDeviceId();
   const msgs = [tag];
-  const videoUsesFakeDevice = DEVICE_ID_MODE === 'fake';
-  let allowCheckIn = true;
-  let allowVideoBonus = MAX_VIDEO > 0;
-
-  debugLog(`${tag} 开始执行，MAX_VIDEO=${MAX_VIDEO}, VIDEO_DELAY=${VIDEO_DELAY}, ACCOUNT_GAP=${ACCOUNT_GAP}, DEVICE_ID_MODE=${DEVICE_ID_MODE}`);
-  debugLog(`${tag} UA=${ua}`);
-  debugLog(`${tag} headers=${Object.keys(headers).sort().join(',')}`);
 
   function fetchApi(path, useFakeId) {
     const overrideId = useFakeId ? fakeDeviceId : null;
-    const info = buildUrlInfo(path, acc.capture, overrideId);
-    debugLog(`${tag} 请求 ${path} signDate=${info.signDate} sign=${maskValue(info.sign)} device=${maskValue(info.deviceId)} fakeDevice=${!!overrideId}`);
-    return $task.fetch({ url: info.url, method: 'GET', headers }).then(res => {
-      debugLog(`${tag} 响应 ${path} status=${res.statusCode || res.status || 'unknown'} body=${String(res.body || '').slice(0, 500)}`);
-      return res;
-    }).catch(err => {
-      debugLog(`${tag} 请求失败 ${path} ${err.error || String(err)}`);
-      throw err;
-    });
-  }
-
-  function parseApiBody(res, label) {
-    try {
-      return JSON.parse(res.body);
-    } catch (e) {
-      msgs.push(`❌ ${label}：解析失败 body=${String(res.body || '').slice(0, 120)}`);
-      return null;
-    }
+    return $task.fetch({ url: buildUrl(path, acc.capture, overrideId), method: 'GET', headers });
   }
 
   function doVideoLoop(count) {
-    if (!allowVideoBonus || count <= 0) {
-      debugLog(`${tag} 跳过视频奖励 allowVideoBonus=${allowVideoBonus} count=${count}`);
-      return Promise.resolve();
-    }
     let i = 0;
     function next() {
       if (i >= count) return Promise.resolve();
       return new Promise(resolve => {
         setTimeout(() => {
           i++;
-          fetchApi('videoBonus', videoUsesFakeDevice).then(res => {
-            const d = parseApiBody(res, `视频${i}`);
-            if (!d) return resolve();
-            if (d.retcode === 0) {
-              msgs.push(`🎬 视频${i}：+${d.result?.bonus || '?'} Coins`);
-              resolve(next());
-            } else {
-              msgs.push(`⏸ 视频${i}：retcode=${d.retcode} ${d.retmsg || ''}`.trim());
+          fetchApi('videoBonus', true).then(res => {
+            try {
+              const d = JSON.parse(res.body);
+              if (d.retcode === 0) {
+                msgs.push(`🎬 视频${i}：+${d.result?.bonus || '?'} Coins`);
+                resolve(next());
+              } else {
+                msgs.push(`⏸ 视频${i}：${d.retmsg}`);
+                resolve();
+              }
+            } catch (e) {
+              msgs.push(`❌ 视频${i}：解析失败`);
               resolve();
             }
           }).catch(err => {
@@ -375,31 +292,24 @@ function runAccount(acc, index, total) {
   }
 
   return fetchApi('queryBalanceAndBonus').then(res => {
-    const d = parseApiBody(res, '查询');
-    if (d && d.retcode === 0) {
-      const result = d.result || {};
-      allowCheckIn = result.isallowcheckin !== false;
-      allowVideoBonus = allowVideoBonus && result.isallowvideobonus !== false;
-      msgs.push(`💰 余额：${result.balance} Coins`);
-      msgs.push(`ℹ️ 状态：签到${allowCheckIn ? '允许' : '不允许'}，视频${allowVideoBonus ? '允许' : '不允许'}`);
-      if (!allowCheckIn && result.notallowcheckinreason) msgs.push(`⏭ 签到跳过：${result.notallowcheckinreason}`);
-      if (!allowVideoBonus && result.notallowvideobonusreason) msgs.push(`⏭ 视频跳过：${result.notallowvideobonusreason}`);
-      debugLog(`${tag} eligibility isallowcheckin=${result.isallowcheckin} isallowvideobonus=${result.isallowvideobonus} notallowcheckinreason=${result.notallowcheckinreason || ''} notallowvideobonusreason=${result.notallowvideobonusreason || ''}`);
-    } else if (d) {
-      msgs.push(`⚠️ 查询：retcode=${d.retcode} ${d.retmsg || ''}`.trim());
-    }
-    if (!allowCheckIn) return null;
+    try {
+      const d = JSON.parse(res.body);
+      if (d.retcode === 0) msgs.push(`💰 余额：${d.result.balance} Coins`);
+      else msgs.push(`⚠️ 查询：${d.retmsg}`);
+    } catch (e) { msgs.push('❌ 查询：解析失败'); }
     return fetchApi('checkIn');
   }).then(res => {
-    if (!res) return null;
-    const d = parseApiBody(res, '签到');
-    if (!d) return null;
-    if (d.retcode === 0) msgs.push(`✅ 签到：${(d.result?.bonusHint || d.retmsg || '').replace(/\n/g, ' ')}`);
-    else msgs.push(`⚠️ 签到：retcode=${d.retcode} ${d.retmsg || ''}`.trim());
-    return null;
-  }).then(() => doVideoLoop(MAX_VIDEO)).then(() => fetchApi('queryBalanceAndBonus')).then(res => {
-    const d = parseApiBody(res, '最新余额');
-    if (d && d.retcode === 0) msgs.push(`💰 最新余额：${d.result.balance} Coins`);
+    try {
+      const d = JSON.parse(res.body);
+      if (d.retcode === 0) msgs.push(`✅ 签到：${(d.result?.bonusHint || d.retmsg || '').replace(/\n/g, ' ')}`);
+      else msgs.push(`⚠️ 签到：${d.retmsg}`);
+    } catch (e) { msgs.push('❌ 签到：解析失败'); }
+    return doVideoLoop(MAX_VIDEO);
+  }).then(() => fetchApi('queryBalanceAndBonus')).then(res => {
+    try {
+      const d = JSON.parse(res.body);
+      if (d.retcode === 0) msgs.push(`💰 最新余额：${d.result.balance} Coins`);
+    } catch (e) {}
     return msgs.join('\n');
   }).catch(err => {
     msgs.push(`❌ 异常：${err.error || String(err)}`);
@@ -413,15 +323,12 @@ if (typeof $request !== 'undefined' && $request) {
   let baseUA = '';
   Object.keys(headersMap).forEach(k => { if (k.toLowerCase() === 'user-agent') baseUA = headersMap[k]; });
 
-  debugLog(`抓包 URL path=${($request.url.match(/\/app\/([^?]+)/) || [])[1] || 'unknown'} queryKeys=${Object.keys(paramsRaw).sort().join(',')}`);
-  debugLog(`抓包 headers=${Object.keys(headersMap).sort().join(',')}`);
-
   const store = loadStore();
-  const fp = fingerprintOf(paramsRaw, headersMap);
+  const fp = fingerprintOf(paramsRaw);
   const now = Date.now();
   const existed = !!store.accounts[fp];
-  const manualAlias = (typeof $prefs !== 'undefined' && $prefs.valueForKey) ? String($prefs.valueForKey('pingme_next_alias') || '').trim() : '';
   const uaSeed = existed ? store.accounts[fp].uaSeed : store.order.length;
+  const manualAlias = readPrefString('pingme_next_alias', '');
   const alias = manualAlias || (existed ? store.accounts[fp].alias : `账号${store.order.length + 1}`);
 
   store.accounts[fp] = {
