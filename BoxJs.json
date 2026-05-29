@@ -7,76 +7,60 @@
     "repo": "https://github.com/0xiaoluli0/QX",
     "apps": [
         {
-  "id": "ZenMoFiShi.PingMe",
-  "name": "PingMe 自动化签到+视频奖励",
-  "author": "@ZenMoFiShi / multi-account modified by Minis",
-  "icon": "https://raw.githubusercontent.com/Orz-3/mini/master/Color/telegram.png",
-  "repo": "https://raw.githubusercontent.com/ZenmoFeiShi/Qx/refs/heads/main/PingMe.js",
-  "apps": [
-        {
-          "id": "ZenMoFiShi.PingMe",
-          "name": "PingMe 自动化签到+视频奖励",
-          "author": "@ZenMoFiShi / multi-account modified by Minis",
-          "icon": "https://raw.githubusercontent.com/Orz-3/mini/master/Color/telegram.png",
-          "repo": "https://raw.githubusercontent.com/ZenmoFeiShi/Qx/refs/heads/main/PingMe.js",
-          "apps": [
+          "id": "minis.pingme.multi",
+          "name": "PingMe 多账号管理",
+          "keys": [
+            "pingme_accounts_v2",
+            "pingme_next_alias",
+            "pingme_max_video",
+            "pingme_video_delay_ms",
+            "pingme_account_gap_ms"
+          ],
+          "settings": [
             {
-              "id": "minis.pingme.multi",
-              "name": "PingMe 多账号管理",
-              "keys": [
-                "pingme_accounts_v2",
-                "pingme_next_alias",
-                "pingme_max_video",
-                "pingme_video_delay_ms",
-                "pingme_account_gap_ms"
-              ],
-              "settings": [
-                {
-                  "id": "pingme_accounts_v2",
-                  "name": "已抓取账号库（自动维护）",
-                  "val": "",
-                  "type": "textarea",
-                  "placeholder": "这里由脚本自动写入 JSON；一般不要手改，手贱改坏了别怪 BoxJs。",
-                  "desc": "脚本自动保存的多账号 JSON。抓包 queryBalanceAndBonus 后会自动新增/更新账号。需要清空全部账号时，可删除此项内容后保存。"
-                },
-                {
-                  "id": "pingme_next_alias",
-                  "name": "下一次抓包账号备注",
-                  "val": "",
-                  "type": "text",
-                  "placeholder": "例如：A号 / 手机号尾号1234 / AppleID-B",
-                  "desc": "可选。填写后，下一次抓到/更新账号时会用这个备注名。抓完一个账号后建议手动改成下一个账号备注；留空则自动命名为账号1、账号2。"
-                },
-                {
-                  "id": "pingme_max_video",
-                  "name": "每账号视频奖励次数",
-                  "val": "5",
-                  "type": "number",
-                  "desc": "默认 5。脚本会限制在 0-20，别贪，风控不是摆设。"
-                },
-                {
-                  "id": "pingme_video_delay_ms",
-                  "name": "视频奖励间隔毫秒",
-                  "val": "8000",
-                  "type": "number",
-                  "desc": "默认 8000ms。脚本会限制在 1000-60000。太短容易请求失败或触发风控。"
-                },
-                {
-                  "id": "pingme_account_gap_ms",
-                  "name": "账号之间间隔毫秒",
-                  "val": "3500",
-                  "type": "number",
-                  "desc": "默认 3500ms。脚本会限制在 0-60000。多账号建议别设太小。"
-                }
-              ],
-              "author": "@ZenMoFiShi / multi-account modified by Minis",
-              "repo": "https://raw.githubusercontent.com/ZenmoFeiShi/Qx/refs/heads/main/PingMe.js",
-              "script": "https://raw.githubusercontent.com/ZenmoFeiShi/Qx/refs/heads/main/PingMe.js",
-              "icons": [
-                "https://raw.githubusercontent.com/Orz-3/mini/master/Alpha/telegram.png",
-                "https://raw.githubusercontent.com/Orz-3/mini/master/Color/telegram.png"
-              ]
+              "id": "pingme_accounts_v2",
+              "name": "已抓取账号库（自动维护）",
+              "val": "",
+              "type": "textarea",
+              "placeholder": "这里由脚本自动写入 JSON；一般不要手改，手贱改坏了别怪 BoxJs。",
+              "desc": "脚本自动保存的多账号 JSON。抓包 queryBalanceAndBonus 后会自动新增/更新账号。需要清空全部账号时，可删除此项内容后保存。"
+            },
+            {
+              "id": "pingme_next_alias",
+              "name": "下一次抓包账号备注",
+              "val": "",
+              "type": "text",
+              "placeholder": "例如：A号 / 手机号尾号1234 / AppleID-B",
+              "desc": "可选。填写后，下一次抓到/更新账号时会用这个备注名。抓完一个账号后建议手动改成下一个账号备注；留空则自动命名为账号1、账号2。"
+            },
+            {
+              "id": "pingme_max_video",
+              "name": "每账号视频奖励次数",
+              "val": "5",
+              "type": "number",
+              "desc": "默认 5。脚本会限制在 0-20，别贪，风控不是摆设。"
+            },
+            {
+              "id": "pingme_video_delay_ms",
+              "name": "视频奖励间隔毫秒",
+              "val": "8000",
+              "type": "number",
+              "desc": "默认 8000ms。脚本会限制在 1000-60000。太短容易请求失败或触发风控。"
+            },
+            {
+              "id": "pingme_account_gap_ms",
+              "name": "账号之间间隔毫秒",
+              "val": "3500",
+              "type": "number",
+              "desc": "默认 3500ms。脚本会限制在 0-60000。多账号建议别设太小。"
             }
+          ],
+          "author": "@ZenMoFiShi / multi-account modified by Minis",
+          "repo": "https://raw.githubusercontent.com/ZenmoFeiShi/Qx/refs/heads/main/PingMe.js",
+          "script": "https://raw.githubusercontent.com/ZenmoFeiShi/Qx/refs/heads/main/PingMe.js",
+          "icons": [
+            "https://raw.githubusercontent.com/Orz-3/mini/master/Alpha/telegram.png",
+            "https://raw.githubusercontent.com/Orz-3/mini/master/Color/telegram.png"
           ]
         },
         {
