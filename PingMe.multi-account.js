@@ -5,9 +5,10 @@
 @Modified：多账号指纹加入登录态 header，避免同设备多号互相覆盖
 
 [rewrite_local]
-^https:\/\/api\.pingmeapp\.net\/app\/queryBalanceAndBonus url script-request-header https://raw.githubusercontent.com/0xiaoluli0/QX/refs/heads/main/PingMe.multi-account.js
+^https:\/\/api\.pingmeapp\.net\/app\/queryBalanceAndBonus url script-request-header https://raw.githubusercontent.com/ZenmoFeiShi/Qx/refs/heads/main/PingMe.js
+
 [task_local]
-30 8,20 * * * https://raw.githubusercontent.com/0xiaoluli0/QX/refs/heads/main/PingMe.multi-account.js, tag=PingMe签到, enabled=true
+30 8,20 * * * https://raw.githubusercontent.com/ZenmoFeiShi/Qx/refs/heads/main/PingMe.js, tag=PingMe签到, enabled=true
 
 [MITM]
 hostname = api.pingmeapp.net
@@ -313,6 +314,8 @@ function runAccount(acc, index, total) {
   const fakeDeviceId = genFakeDeviceId();
   const msgs = [tag];
   const videoUsesFakeDevice = DEVICE_ID_MODE === 'fake';
+  let allowCheckIn = true;
+  let allowVideoBonus = MAX_VIDEO > 0;
 
   debugLog(`${tag} 开始执行，MAX_VIDEO=${MAX_VIDEO}, VIDEO_DELAY=${VIDEO_DELAY}, ACCOUNT_GAP=${ACCOUNT_GAP}, DEVICE_ID_MODE=${DEVICE_ID_MODE}`);
   debugLog(`${tag} UA=${ua}`);
@@ -331,7 +334,20 @@ function runAccount(acc, index, total) {
     });
   }
 
+  function parseApiBody(res, label) {
+    try {
+      return JSON.parse(res.body);
+    } catch (e) {
+      msgs.push(`❌ ${label}：解析失败 body=${String(res.body || '').slice(0, 120)}`);
+      return null;
+    }
+  }
+
   function doVideoLoop(count) {
+    if (!allowVideoBonus || count <= 0) {
+      debugLog(`${tag} 跳过视频奖励 allowVideoBonus=${allowVideoBonus} count=${count}`);
+      return Promise.resolve();
+    }
     let i = 0;
     function next() {
       if (i >= count) return Promise.resolve();
@@ -339,17 +355,13 @@ function runAccount(acc, index, total) {
         setTimeout(() => {
           i++;
           fetchApi('videoBonus', videoUsesFakeDevice).then(res => {
-            try {
-              const d = JSON.parse(res.body);
-              if (d.retcode === 0) {
-                msgs.push(`🎬 视频${i}：+${d.result?.bonus || '?'} Coins`);
-                resolve(next());
-              } else {
-                msgs.push(`⏸ 视频${i}：retcode=${d.retcode} ${d.retmsg || ''}`.trim());
-                resolve();
-              }
-            } catch (e) {
-              msgs.push(`❌ 视频${i}：解析失败 body=${String(res.body || '').slice(0, 120)}`);
+            const d = parseApiBody(res, `视频${i}`);
+            if (!d) return resolve();
+            if (d.retcode === 0) {
+              msgs.push(`🎬 视频${i}：+${d.result?.bonus || '?'} Coins`);
+              resolve(next());
+            } else {
+              msgs.push(`⏸ 视频${i}：retcode=${d.retcode} ${d.retmsg || ''}`.trim());
               resolve();
             }
           }).catch(err => {
@@ -363,24 +375,31 @@ function runAccount(acc, index, total) {
   }
 
   return fetchApi('queryBalanceAndBonus').then(res => {
-    try {
-      const d = JSON.parse(res.body);
-      if (d.retcode === 0) msgs.push(`💰 余额：${d.result.balance} Coins`);
-      else msgs.push(`⚠️ 查询：retcode=${d.retcode} ${d.retmsg || ''}`.trim());
-    } catch (e) { msgs.push(`❌ 查询：解析失败 body=${String(res.body || '').slice(0, 120)}`); }
+    const d = parseApiBody(res, '查询');
+    if (d && d.retcode === 0) {
+      const result = d.result || {};
+      allowCheckIn = result.isallowcheckin !== false;
+      allowVideoBonus = allowVideoBonus && result.isallowvideobonus !== false;
+      msgs.push(`💰 余额：${result.balance} Coins`);
+      msgs.push(`ℹ️ 状态：签到${allowCheckIn ? '允许' : '不允许'}，视频${allowVideoBonus ? '允许' : '不允许'}`);
+      if (!allowCheckIn && result.notallowcheckinreason) msgs.push(`⏭ 签到跳过：${result.notallowcheckinreason}`);
+      if (!allowVideoBonus && result.notallowvideobonusreason) msgs.push(`⏭ 视频跳过：${result.notallowvideobonusreason}`);
+      debugLog(`${tag} eligibility isallowcheckin=${result.isallowcheckin} isallowvideobonus=${result.isallowvideobonus} notallowcheckinreason=${result.notallowcheckinreason || ''} notallowvideobonusreason=${result.notallowvideobonusreason || ''}`);
+    } else if (d) {
+      msgs.push(`⚠️ 查询：retcode=${d.retcode} ${d.retmsg || ''}`.trim());
+    }
+    if (!allowCheckIn) return null;
     return fetchApi('checkIn');
   }).then(res => {
-    try {
-      const d = JSON.parse(res.body);
-      if (d.retcode === 0) msgs.push(`✅ 签到：${(d.result?.bonusHint || d.retmsg || '').replace(/\n/g, ' ')}`);
-      else msgs.push(`⚠️ 签到：retcode=${d.retcode} ${d.retmsg || ''}`.trim());
-    } catch (e) { msgs.push(`❌ 签到：解析失败 body=${String(res.body || '').slice(0, 120)}`); }
-    return doVideoLoop(MAX_VIDEO);
-  }).then(() => fetchApi('queryBalanceAndBonus')).then(res => {
-    try {
-      const d = JSON.parse(res.body);
-      if (d.retcode === 0) msgs.push(`💰 最新余额：${d.result.balance} Coins`);
-    } catch (e) { debugLog(`${tag} 最新余额解析失败 body=${String(res.body || '').slice(0, 500)}`); }
+    if (!res) return null;
+    const d = parseApiBody(res, '签到');
+    if (!d) return null;
+    if (d.retcode === 0) msgs.push(`✅ 签到：${(d.result?.bonusHint || d.retmsg || '').replace(/\n/g, ' ')}`);
+    else msgs.push(`⚠️ 签到：retcode=${d.retcode} ${d.retmsg || ''}`.trim());
+    return null;
+  }).then(() => doVideoLoop(MAX_VIDEO)).then(() => fetchApi('queryBalanceAndBonus')).then(res => {
+    const d = parseApiBody(res, '最新余额');
+    if (d && d.retcode === 0) msgs.push(`💰 最新余额：${d.result.balance} Coins`);
     return msgs.join('\n');
   }).catch(err => {
     msgs.push(`❌ 异常：${err.error || String(err)}`);
