@@ -53,6 +53,22 @@
               "val": "3500",
               "type": "number",
               "desc": "默认 3500ms。脚本会限制在 0-60000。多账号建议别设太小。"
+            },
+            {
+              "id": "pingme_debug_log",
+              "name": "调试日志开关",
+              "val": "false",
+              "type": "text",
+              "placeholder": "true / false",
+              "desc": "签到没签上时改成 true，再去 QX 日志里看每个接口的 retcode、retmsg、HTTP 状态、signDate、脱敏 sign/device。调完记得关，不然日志吵死。"
+            },
+            {
+              "id": "pingme_device_id_mode",
+              "name": "视频奖励设备 ID 模式",
+              "val": "original",
+              "type": "text",
+              "placeholder": "original 或 fake",
+              "desc": "默认 original，所有接口使用抓包原始 uniquedeviceid。若只有视频奖励需要模拟新设备，再改成 fake。之前强制 fake 可能影响签到/风控，别乱开。"
             }
           ],
           "author": "@ZenMoFiShi / multi-account modified by Minis",
