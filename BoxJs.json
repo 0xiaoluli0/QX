@@ -7,60 +7,55 @@
     "repo": "https://github.com/0xiaoluli0/QX",
     "apps": [
         {
-          "id": "zenmofeishi.pingme.boxjs",
-          "name": "PingMe 多账号管理",
+          "id": "minis.pingme.checkin",
+          "name": "PingMe 签到+视频奖励",
           "keys": [
-            "pingme_accounts_v1",
-            "pingme_next_alias",
-            "pingme_max_video",
-            "pingme_video_delay_ms",
-            "pingme_account_gap_ms"
+            "pingme_capture_alias",
+            "pingme_video_count",
+            "pingme_video_delay",
+            "pingme_account_gap",
+        "pingme_accounts_v1"
           ],
           "settings": [
             {
-              "id": "pingme_accounts_v1",
-              "name": "PingMe 账号库（自动维护）",
-              "val": "",
-              "type": "textarea",
-              "placeholder": "脚本自动写入 JSON。要改已有账号名，可在 accounts 里找到对应账号，把 alias 改成你想要的名字。",
-              "desc": "原版账号库 key，仍使用 pingme_accounts_v1，兼容原版已抓账号。定时任务会按 order 顺序逐个执行。清空此项后需要重新逐个账号抓包。"
-            },
-            {
-              "id": "pingme_next_alias",
+              "id": "pingme_capture_alias",
               "name": "抓包账号备注",
               "val": "",
               "type": "text",
-              "placeholder": "例如：heart / 小号B / AppleID尾号1234",
-              "desc": "填写后，下一次打开 PingMe 触发 queryBalanceAndBonus 抓包时，会把新增/更新的账号 alias 命名为这里的值。抓完一个账号后记得改成下一个账号名；留空则按原版自动命名账号1、账号2。"
+              "placeholder": "例如：大号 / 138xxxx",
+              "desc": "抓包前先填写此项，则本次抓到的账号将使用该备注名；抓包成功后会自动清空，方便下一个账号填写。留空则按 账号1、账号2… 自动命名。"
             },
             {
-              "id": "pingme_max_video",
+              "id": "pingme_video_count",
               "name": "每账号视频奖励次数",
               "val": "5",
-              "type": "number",
-              "desc": "默认 5，和原版一致。脚本读取范围限制为 0-20。"
+              "type": "text",
+              "placeholder": "5",
+              "desc": "每个账号每次运行观看视频奖励的次数。留空或非法值则默认 5。"
             },
             {
-              "id": "pingme_video_delay_ms",
-              "name": "视频奖励间隔毫秒",
+              "id": "pingme_video_delay",
+              "name": "视频奖励间隔时间(毫秒)",
               "val": "8000",
-              "type": "number",
-              "desc": "默认 8000ms，和原版一致。脚本读取范围限制为 1000-60000。"
+              "type": "text",
+              "placeholder": "8000",
+              "desc": "同一账号两次视频奖励之间的等待时间，单位毫秒。留空或非法值则默认 8000（8秒）。"
             },
             {
-              "id": "pingme_account_gap_ms",
-              "name": "账号时间间隔毫秒",
+              "id": "pingme_account_gap",
+              "name": "账号时间间隔(毫秒)",
               "val": "3500",
-              "type": "number",
-              "desc": "默认 3500ms，和原版一致。脚本读取范围限制为 0-60000。"
+              "type": "text",
+              "placeholder": "3500",
+              "desc": "多账号运行时，账号之间的间隔时间，单位毫秒。留空或非法值则默认 3500（3.5秒）。"
             }
           ],
-          "author": "@ZenMoFeiShi / BoxJs patch by Minis",
-          "repo": "https://github.com/0xiaoluli0/QX/raw/refs/heads/main/PingMe.multi-account.js",
-          "script": "https://github.com/0xiaoluli0/QX/raw/refs/heads/main/PingMe.multi-account.js",
+          "author": "@怎么肥事",
+          "repo": "https://raw.githubusercontent.com/0xiaoluli0/QX/refs/heads/main/PingMe.js",
+          "script": "https://raw.githubusercontent.com/0xiaoluli0/QX/refs/heads/main/PingMe.js",
           "icons": [
-            "https://raw.githubusercontent.com/fmz200/wool_scripts/main/icons/apps/PingMe.png",
-            "https://raw.githubusercontent.com/fmz200/wool_scripts/main/icons/apps/PingMe.png"
+            "https://raw.githubusercontent.com/Orz-3/mini/master/Alpha/appstore.png",
+            "https://raw.githubusercontent.com/Orz-3/mini/master/Color/appstore.png"
           ]
         },
         {
